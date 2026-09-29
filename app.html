@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>SurfMath - calculator</title>
+<style>
+  body { font-family: system-ui, sans-serif; background: #0b1d26; color: #e4f3f8; margin: 0; display: flex; flex-direction: column; align-items: center; min-height: 100vh; }
+  main { max-width: 720px; padding: 32px 20px 48px; width: 100%; box-sizing: border-box; }
+  h1 { font-size: 1.9rem; margin: 0 0 4px; }
+  p.sub { color: #9cc8d8; margin: 0 0 20px; }
+  .card { background: #112a38; border: 1px solid #1f4a5e; border-radius: 12px; padding: 18px 20px; margin-bottom: 16px; }
+  .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px 18px; }
+  label { display: block; color: #8fb9c9; font-size: 0.82rem; margin-bottom: 4px; }
+  input, select { width: 100%; box-sizing: border-box; background: #0b1d26; border: 1px solid #28566b; color: #e4f3f8; border-radius: 8px; padding: 9px 10px; font-size: 0.95rem; }
+  .presets { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 16px; }
+  .presets button { background: #16394c; color: #cbe6ef; border: 1px solid #28566b; border-radius: 999px; padding: 7px 14px; font-size: 0.85rem; cursor: pointer; }
+  .presets button:hover { background: #1e4d66; }
+  .out { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  .metric { background: #0b1d26; border: 1px solid #1f4a5e; border-radius: 10px; padding: 12px 14px; }
+  .metric .v { font-size: 1.3rem; font-weight: 700; color: #5fcadb; }
+  .metric .k { color: #8fb9c9; font-size: 0.78rem; margin-top: 2px; }
+  .note { color: #7ba7b6; font-size: 0.82rem; line-height: 1.5; margin-top: 10px; }
+  a.back { color: #5fcadb; font-size: 0.85rem; }
+</style>
+</head>
+<body>
+<main>
+  <h1>&#127940; SurfMath</h1>
+  <p class="sub">Surf calculator. Swell, board, session - honest numbers.</p>
+  <div class="presets">
+    <button data-p="learn">Learning at the beach break</button>
+    <button data-p="fun">Fun weekend crowd</button>
+    <button data-p="ground">Groundswell day</button>
+    <button data-p="cold">Cold morning session</button>
+  </div>
+  <div class="card">
+    <div class="grid">
+      <div><label>Swell height (ft)</label><input id="heightFt" type="number" value="4" min="0.5" step="0.5"></div>
+      <div><label>Swell period (sec)</label><input id="periodSec" type="number" value="9" min="4"></div>
+      <div><label>Your weight (lb)</label><input id="weightLb" type="number" value="176" min="60"></div>
+      <div><label>Skill level</label><select id="skill"><option value="beginner">Beginner</option><option value="intermediate" selected>Intermediate</option><option value="advanced">Advanced</option><option value="pro">Pro</option></select></div>
+      <div><label>Session length (min)</label><input id="minutes" type="number" value="90" min="15"></div>
+      <div><label>Set interval (min)</label><input id="setIntervalMin" type="number" value="12" min="4"></div>
+      <div><label>Waves per set</label><input id="wavesPerSet" type="number" value="3" min="1"></div>
+      <div><label>Surfers sharing the peak</label><input id="crowd" type="number" value="4" min="1"></div>
+      <div><label>Your position</label><select id="position"><option value="average" selected>Average</option><option value="good">Sitting deep</option></select></div>
+      <div><label>Water temp (F)</label><input id="waterF" type="number" value="62"></div>
+      <div><label>Swell distance (nm)</label><input id="distanceNm" type="number" value="1000" min="50"></div>
+      <div><label>Conditions</label><select id="conditions"><option value="small">Small and soft</option><option value="average" selected>Average</option><option value="pumping">Pumping</option></select></div>
+    </div>
+  </div>
+  <div class="out">
+    <div class="metric"><div class="v" id="o-power">-</div><div class="k">Wave power (relative)</div></div>
+    <div class="metric"><div class="v" id="o-board">-</div><div class="k">Board volume (liters)</div></div>
+    <div class="metric"><div class="v" id="o-rides">-</div><div class="k">Realistic rides this session</div></div>
+    <div class="metric"><div class="v" id="o-suit">-</div><div class="k">Wetsuit call</div></div>
+    <div class="metric"><div class="v" id="o-swell">-</div><div class="k">Swell travel time (hrs)</div></div>
+    <div class="metric"><div class="v" id="o-kcal">-</div><div class="k">Session burn (kcal)</div></div>
+  </div>
+  <p class="note" id="o-verdicts"></p>
+  <p class="note">Volume bands assume average fitness. If you are between sizes, go up - extra liters catch more waves, and waves caught are the only practice that counts.</p>
+  <p><a class="back" href="index.html">&larr; Back to SurfMath</a></p>
+</main>
+<script src="engine.js"></script>
+<script>
+(function () {
+  var ids = ['heightFt','periodSec','weightLb','skill','minutes','setIntervalMin','wavesPerSet','crowd','position','waterF','distanceNm','conditions'];
+  function num(id) { var v = parseFloat(document.getElementById(id).value); return isFinite(v) ? v : 0; }
+  function compute() {
+    if (typeof SurfMath === 'undefined') return;
+    var power = SurfMath.wavePower(num('heightFt'), num('periodSec'));
+    var liters = SurfMath.boardLiters(num('weightLb'), document.getElementById('skill').value);
+    var rides = SurfMath.ridesPerSession({
+      minutes: num('minutes'), setIntervalMin: num('setIntervalMin'),
+      wavesPerSet: num('wavesPerSet'), crowd: num('crowd'),
+      position: document.getElementById('position').value
+    });
+    var suit = SurfMath.wetsuitMm(num('waterF'));
+    var swell = SurfMath.swellHours(num('distanceNm'), num('periodSec'));
+    var kcal = SurfMath.sessionKcal(num('minutes'), document.getElementById('conditions').value);
+    document.getElementById('o-power').textContent = power;
+    document.getElementById('o-board').textContent = liters + ' L';
+    document.getElementById('o-rides').textContent = rides;
+    document.getElementById('o-suit').textContent = suit;
+    document.getElementById('o-swell').textContent = isFinite(swell) ? swell + ' h' : 'n/a';
+    document.getElementById('o-kcal').textContent = kcal + ' kcal';
+    document.getElementById('o-verdicts').textContent =
+      'Power: ' + SurfMath.powerVerdict(power) + '. Board: ' + SurfMath.volumeVerdict(liters, num('weightLb')) + '.';
+  }
+  var presets = {
+    learn: {heightFt:2, periodSec:8, weightLb:176, skill:'beginner', minutes:90, setIntervalMin:10, wavesPerSet:4, crowd:12, position:'average', waterF:70, distanceNm:300, conditions:'small'},
+    fun: {heightFt:4, periodSec:9, weightLb:176, skill:'intermediate', minutes:90, setIntervalMin:12, wavesPerSet:3, crowd:4, position:'average', waterF:62, distanceNm:1000, conditions:'average'},
+    ground: {heightFt:5, periodSec:14, weightLb:176, skill:'advanced', minutes:120, setIntervalMin:15, wavesPerSet:4, crowd:2, position:'good', waterF:58, distanceNm:1500, conditions:'pumping'},
+    cold: {heightFt:3, periodSec:10, weightLb:176, skill:'intermediate', minutes:60, setIntervalMin:11, wavesPerSet:3, crowd:3, position:'average', waterF:48, distanceNm:800, conditions:'average'}
+  };
+  Array.prototype.forEach.call(document.querySelectorAll('.presets button'), function (b) {
+    b.addEventListener('click', function () {
+      var p = presets[b.getAttribute('data-p')];
+      if (!p) return;
+      Object.keys(p).forEach(function (k) { document.getElementById(k).value = p[k]; });
+      compute();
+    });
+  });
+  ids.forEach(function (id) {
+    document.getElementById(id).addEventListener('input', compute);
+    document.getElementById(id).addEventListener('change', compute);
+  });
+  compute();
+})();
+</script>
+</body>
+</html>
